@@ -4,31 +4,33 @@ import (
 	"fmt"
 
 	"example.com/price-calculator/conversion"
-	"example.com/price-calculator/filemanager"
+	"example.com/price-calculator/iomanager"
 )
 
 type TaxIncludedPriceJob struct {
-	IOManager         filemanager.FileManager `json:"-"`
-	TaxRate           float64                 `json:"tax_rate"`
-	InputPrices       []float64               `json:"input_prices"`
-	TaxIncludedPrices map[string]string       `json:"tax_included_prices"`
+	IOManager         iomanager.IOManager `json:"-"`
+	TaxRate           float64             `json:"tax_rate"`
+	InputPrices       []float64           `json:"input_prices"`
+	TaxIncludedPrices map[string]string   `json:"tax_included_prices"`
 }
 
 /*
 As package name is price so we would avoid writing just New() for constructor else
 we will prefer to use proper naming for what is actually creates
 */
-func NewTaxIncludedPriceJob(fm filemanager.FileManager, taxRate float64) *TaxIncludedPriceJob {
+func NewTaxIncludedPriceJob(io iomanager.IOManager, taxRate float64) *TaxIncludedPriceJob {
 	return &TaxIncludedPriceJob{
-		IOManager:   fm,
+		IOManager:   io,
 		InputPrices: []float64{10, 20, 30},
 		TaxRate:     taxRate,
 	}
 }
 
-func (job *TaxIncludedPriceJob) Process() {
-	job.LoadData()
-
+func (job *TaxIncludedPriceJob) Process() error {
+	err := job.LoadData()
+	if err != nil {
+		return err
+	}
 	result := make(map[string]string)
 	for _, price := range job.InputPrices {
 		taxIncludedPrice := price * (1 + job.TaxRate)
@@ -41,21 +43,20 @@ func (job *TaxIncludedPriceJob) Process() {
 	job as per tax rate and did some calculation to avoid the decimal tax in name*/
 
 	//filemanager.WriteJSON(fmt.Sprintf("result_%.0f.json", job.TaxRate*100), job)
-	job.IOManager.WriteResult(job)
+	return job.IOManager.WriteResult(job)
 
 }
 
-func (job *TaxIncludedPriceJob) LoadData() {
+func (job *TaxIncludedPriceJob) LoadData() error {
 	lines, err := job.IOManager.ReadLine()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 	price, err := conversion.StringsToFloats(lines)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	job.InputPrices = price
+	return nil
 }
